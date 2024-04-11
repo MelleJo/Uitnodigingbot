@@ -18,7 +18,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from fuzzywuzzy import process
 from docx import Document
-from pydub import AudioSegment
+#from pydub import AudioSegment
 import streamlit.components.v1 as components
 
 
