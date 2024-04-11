@@ -21,7 +21,6 @@ from docx import Document
 #from pydub import AudioSegment
 import streamlit.components.v1 as components
 #from pydub import AudioSegment
-
 st.title("Uitnodigingsbot")
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
@@ -37,19 +36,18 @@ def transcribe_audio(audio_bytes):
         return response['text']
 
 def generate_uitnodiging(input_text):
-    """Genereer een uitnodiging op basis van de inputtekst met de chat API."""
-    chat_model = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4-turbo")
-    response = chat_model.chat_completions.create(
+    """Genereer een uitnodiging op basis van de inputtekst."""
+    response = client.chat_completions.create(
         model="gpt-4-turbo",
         messages=[
-            {"role": "system", "content": "Je bent een assistent die helpt met het plannen van afspraken."},
+            {"role": "system", "content": "Je bent een assistent die helpt met het plannen van afspraken voor Danique."},
             {"role": "user", "content": input_text}
         ]
     )
-    # Neem het laatste antwoord uit de responses
-    return response['choices'][0]['message']['content']
+    # Neem het laatste bericht uit de responses
+    return response.choices[0].message['content']
 
-# Laat de gebruiker kiezen tussen audio of tekst input
+# Kies tussen audio of tekstinput
 input_method = st.radio("Hoe wil je de uitnodiging genereren?", ["Audio", "Tekst"])
 
 if input_method == "Audio":
