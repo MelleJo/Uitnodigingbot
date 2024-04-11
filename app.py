@@ -47,11 +47,25 @@ def transcribe_audio(audio_bytes):
         return transcription_response['text'] if transcription_response else "Transcriptie mislukt."
 
 def generate_uitnodiging(input_text):
-    prompt_text = f"Schrijf een uitnodiging op basis van de input: {input_text}"
-    chat_model = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4-0125-preview", temperature=0)
-    prompt_template = ChatPromptTemplate.from_template(prompt_text)
+    prompt = f"""
+    Schrijf een gestructureerde uitnodiging voor Danique om een afspraak te plannen bij de bedrijfsarts, gebaseerd op de volgende informatie: {input_text}.
+    Zorg ervoor dat de uitnodiging de volgende punten bevat:
+    - Werknemer en werkgever
+    - Datum van de afspraak
+    - Naam van de bedrijfsarts
+    - Soort afspraak (Probleemanalyse, Vervolgconsult, etc.)
+    - Vraagstelling met betrekking tot de probleemanalyse, herbeoordeling belastbaarheid, etc.
+    - Actiepunten zoals het maken en versturen van de uitnodiging, taken aanmaken in XS, toevoegen aan spreekuren overzicht, en of facturatie nodig is.
+
+    De uitnodiging moet helder en formeel zijn, gericht aan Danique, met een vriendelijke toon.
+    """
+    chat_model = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4-0125-preview", temperature=0.7)
+    prompt_template = ChatPromptTemplate.from_template(prompt)
     llm_chain = prompt_template | chat_model | StrOutputParser()
-    return llm_chain.invoke({})
+    
+    uitnodiging_response = llm_chain.invoke({})
+    return uitnodiging_response if uitnodiging_response else "Er is iets misgegaan bij het genereren van de uitnodiging."
+
 
 input_method = st.radio("Hoe wil je de uitnodiging genereren?", ["Audio", "Tekst"])
 
