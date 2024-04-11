@@ -20,89 +20,53 @@ from fuzzywuzzy import process
 from docx import Document
 #from pydub import AudioSegment
 import streamlit.components.v1 as components
+from pydub import AudioSegment
 
 
+# Initialiseer je Streamlit app en OpenAI client
 st.title("Uitnodigingsbot")
-
-# Definieer variabelen op een hoger niveau om scope-problemen te voorkomen
-uploaded_audio = None
-uploaded_text = None
-
-
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-def split_audio(file_path, max_size=24000000):
-    audio = AudioSegment.from_file(file_path)
-    duration = len(audio)
-    chunks_count = max(1, duration // (max_size / (len(audio.raw_data) / duration)))
+def transcribe_audio(audio_bytes):
+    """Transcribeer audio naar tekst met OpenAI's Whisper model."""
+    with tempfile.NamedTemporaryFile(delete=True, suffix='.wav') as tmp_file:
+        tmp_file.write(audio_bytes)
+        tmp_file.flush()
+        # Gebruik de OpenAI API om de audio te transcriberen
+        response = client.audio.transcriptions.create(
+            file=open(tmp_file.name, "rb"),
+            model="whisper-1"
+        )
+        return response["text"]
 
-    # Als chunks_count 1 is, retourneer de hele audio in één stuk
-    if chunks_count == 1:
-        return [audio]
+def generate_uitnodiging(input_text):
+    """Genereer een uitnodiging op basis van de inputtekst."""
+    prompt = f"Schrijf een verzoek tot uitnodiging voor mijn collega Danique, gebruikmakend van de volgende input: {input_text}"
+    response = client.completions.create(
+        model="gpt-4-0125-preview",
+        prompt=prompt,
+        temperature=0.7,
+        max_tokens=500
+    )
+    return response.choices[0].text
 
-    # Anders, splits de audio in de berekende aantal chunks
-    return [audio[i:i + duration // chunks_count] for i in range(0, duration, duration // int(chunks_count))]
-
-def transcribe_audio(file_path):
-    with st.spinner("Transcriptie maken..."): 
-        transcript_text = ""
-        try:
-            audio_segments = split_audio(file_path)
-            for segment in audio_segments:
-                with tempfile.NamedTemporaryFile(delete=True, suffix='.wav') as temp_file:
-                    segment.export(temp_file.name, format="wav")
-                    with open(temp_file.name, "rb") as audio_file:
-                        transcription_response = client.audio.transcriptions.create(file=audio_file, model="whisper-1")
-                        if hasattr(transcription_response, 'text'):
-                            transcript_text += transcription_response.text + " "
-            return transcript_text.strip()
-        except Exception as e:
-            st.error(f"Transcription failed: {str(e)}")
-            return "Transcription mislukt."
-        
-def generate_uitnodiging(text):
-    with st.spinner("Een uitnodigingsverzoek maken..."):
-        prompt = "Schrijf een verzoek tot uitnodiging voor mijn collega, je vult op basis van de gebruikers input {text} de volgende velden in: wanneer, welke bedrijfsarts, soort afspraak, vraagstelling, extra vraag, welke taken maken in XS, toevoegen aan spreekuren overzicht (ja/nee), is het consult inclusief/exclusief, is facturatie nodig (ja/nee)"
-
-        chat_model = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4-0125-preview", temperature=0)
-        prompt_template = ChatPromptTemplate.from_template(prompt)
-        llm_chain = prompt_template | chat_model | StrOutputParser()
-        
-        try:
-            uitnodiging_text = llm_chain.invoke({})
-            if not uitnodiging_text:
-                uitnodiging_text = "Mislukt om een uitnodiging te genereren."
-        except Exception as e:
-            st.error(f"Fout bij het genereren van uitnodiging: {e}")
-            uitnodiging_text = "Mislukt om een uitnodiging te genereren."
-
-        return uitnodiging_text
-
-        
+# Laat de gebruiker kiezen tussen audio of tekst input
 input_method = st.radio("Hoe wil je de uitnodiging genereren?", ["Audio", "Tekst"])
 
 if input_method == "Audio":
     audio_data = mic_recorder(
-            key="recorder",
-            start_prompt="Start opname",
-            stop_prompt="Stop opname",
-            use_container_width=True,
-            format="webm"
-        )
+        key="recorder",
+        start_prompt="Start opname",
+        stop_prompt="Stop opname",
+        use_container_width=True,
+        format="webm"
+    )
     if audio_data and 'bytes' in audio_data:
-            uploaded_audio = audio_data['bytes']
+        transcript = transcribe_audio(audio_data['bytes'])
+        uitnodiging = generate_uitnodiging(transcript)
+        st.text_area("Gegenereerde uitnodiging:", uitnodiging, height=250)
 elif input_method == "Tekst":
     uploaded_text = st.text_area("Vul hieronder je tekst in:", height=200)
-
-if uploaded_audio or uploaded_text:
-    if uploaded_text:
+    if st.button("Genereer Uitnodiging"):
         uitnodiging = generate_uitnodiging(uploaded_text)
-    else:
-        uitnodiging = generate_uitnodiging(uploaded_audio)
-    st.write(uitnodiging)
-
-
-        
-
-
-
+        st.text_area("Gegenereerde uitnodiging:", uitnodiging, height=250)
