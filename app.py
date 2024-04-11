@@ -22,8 +22,6 @@ from docx import Document
 import streamlit.components.v1 as components
 #from pydub import AudioSegment
 
-
-# Initialiseer je Streamlit app en OpenAI client
 st.title("Uitnodigingsbot")
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
@@ -32,23 +30,24 @@ def transcribe_audio(audio_bytes):
     with tempfile.NamedTemporaryFile(delete=True, suffix='.wav') as tmp_file:
         tmp_file.write(audio_bytes)
         tmp_file.flush()
-        # Gebruik de OpenAI API om de audio te transcriberen
         response = client.audio.transcriptions.create(
             file=open(tmp_file.name, "rb"),
             model="whisper-1"
         )
-        return response["text"]
+        return response['text']
 
 def generate_uitnodiging(input_text):
-    """Genereer een uitnodiging op basis van de inputtekst."""
-    prompt = f"Schrijf een verzoek tot uitnodiging voor mijn collega Danique, gebruikmakend van de volgende input: {input_text}"
-    response = client.completions.create(
-        model="gpt-4-0125-preview",
-        prompt=prompt,
-        temperature=0.7,
-        max_tokens=500
+    """Genereer een uitnodiging op basis van de inputtekst met de chat API."""
+    chat_model = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4-turbo")
+    response = chat_model.chat_completions.create(
+        model="gpt-4-turbo",
+        messages=[
+            {"role": "system", "content": "Je bent een assistent die helpt met het plannen van afspraken."},
+            {"role": "user", "content": input_text}
+        ]
     )
-    return response.choices[0].text
+    # Neem het laatste antwoord uit de responses
+    return response['choices'][0]['message']['content']
 
 # Laat de gebruiker kiezen tussen audio of tekst input
 input_method = st.radio("Hoe wil je de uitnodiging genereren?", ["Audio", "Tekst"])
