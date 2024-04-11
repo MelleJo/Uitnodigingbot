@@ -20,7 +20,7 @@ from fuzzywuzzy import process
 from docx import Document
 #from pydub import AudioSegment
 import streamlit.components.v1 as components
-from pydub import AudioSegment
+#from pydub import AudioSegment
 
 
 # Initialiseer je Streamlit app en OpenAI client
