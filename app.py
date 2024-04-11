@@ -21,33 +21,38 @@ from docx import Document
 #from pydub import AudioSegment
 import streamlit.components.v1 as components
 #from pydub import AudioSegment
+import streamlit as st
+from openai import OpenAI
+from streamlit_mic_recorder import mic_recorder
+import os
+import tempfile
+from datetime import datetime
+import pytz
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+# Initialisatie
 st.title("Uitnodigingsbot")
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def transcribe_audio(audio_bytes):
-    """Transcribeer audio naar tekst met OpenAI's Whisper model."""
     with tempfile.NamedTemporaryFile(delete=True, suffix='.wav') as tmp_file:
         tmp_file.write(audio_bytes)
         tmp_file.flush()
-        response = client.audio.transcriptions.create(
-            file=open(tmp_file.name, "rb"),
+        transcription_response = client.audio.transcriptions.create(
+            file=open(tmp_file.name, "rb"), 
             model="whisper-1"
         )
-        return response['text']
+        return transcription_response['text'] if transcription_response else "Transcriptie mislukt."
 
 def generate_uitnodiging(input_text):
-    """Genereer een uitnodiging op basis van de inputtekst."""
-    response = client.chat_completions.create(
-        model="gpt-4-turbo",
-        messages=[
-            {"role": "system", "content": "Je bent een assistent die helpt met het plannen van afspraken voor Danique."},
-            {"role": "user", "content": input_text}
-        ]
-    )
-    # Neem het laatste bericht uit de responses
-    return response.choices[0].message['content']
+    prompt_text = f"Schrijf een uitnodiging op basis van de input: {input_text}"
+    chat_model = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4-0125-preview", temperature=0)
+    prompt_template = ChatPromptTemplate.from_template(prompt_text)
+    llm_chain = prompt_template | chat_model | StrOutputParser()
+    return llm_chain.invoke({})
 
-# Kies tussen audio of tekstinput
 input_method = st.radio("Hoe wil je de uitnodiging genereren?", ["Audio", "Tekst"])
 
 if input_method == "Audio":
