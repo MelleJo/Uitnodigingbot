@@ -33,7 +33,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 # Initialisatie
-st.title("Uitnodigingsbot")
+st.title("Uitnodigingsbot - versie 0.0.1.")
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def transcribe_audio(audio_bytes):
