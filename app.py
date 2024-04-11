@@ -24,6 +24,11 @@ import streamlit.components.v1 as components
 
 st.title("Uitnodigingsbot")
 
+# Definieer variabelen op een hoger niveau om scope-problemen te voorkomen
+uploaded_audio = None
+uploaded_text = None
+
+
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def split_audio(file_path, max_size=24000000):
