@@ -36,6 +36,11 @@ from langchain_core.output_parsers import StrOutputParser
 st.title("Uitnodigingsbot")
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
+traject_id = st.text_input("Vul hier je traject-ID in:", key="traject_id")
+standaard_vraagstelling = ""
+standaard_taken = ""
+
+
 def transcribe_audio(audio_bytes):
     """Transcribeer audio naar tekst met OpenAI's Whisper model."""
     with tempfile.NamedTemporaryFile(delete=True, suffix='.wav') as tmp_file:
@@ -49,19 +54,19 @@ def transcribe_audio(audio_bytes):
         return response["text"]
 
 def generate_uitnodiging(input_text, bedrijfsarts):
-    """Genereer een uitnodiging op basis van de inputtekst."""
+    """Genereer een verzoek tot uitnodiging op basis van de inputtekst."""
     prompt = f"""
-    Schrijf een gestructureerde uitnodiging voor Danique om een afspraak te plannen bij de bedrijfsarts {bedrijfsarts}, gebaseerd op de volgende informatie: {input_text}.
+    Schrijf een gestructureerde verzoek tot uitnodiging voor Danique om een afspraak te plannen bij de bedrijfsarts {bedrijfsarts}, gebaseerd op de volgende informatie: {input_text}.
     Zorg ervoor dat de uitnodiging de volgende punten bevat:
-    - Werknemer en werkgever
+    - Traject-ID = {traject_id}
     - Datum van de afspraak
     - Naam van de bedrijfsarts
     - Soort afspraak (Probleemanalyse, Vervolgconsult, etc.)
-    - Vraagstelling met betrekking tot de probleemanalyse, herbeoordeling belastbaarheid, etc.
-    - Actiepunten zoals het maken en versturen van de uitnodiging, taken aanmaken in XS, toevoegen aan spreekuren overzicht, en of facturatie nodig is.
-    De uitnodiging moet helder en formeel zijn, gericht aan Danique, met een vriendelijke toon.
+    - Indien genoemd: "standaard vraagstelling" gebruik je {standaard_vraagstelling}, indien afwijkend gebruik je de gegeven informatie van de gebruiker. 
+    - Indien genoemd: "standaard taken" gebruik je {standaard_taken}, indien afwijkend gebruik je de gegeven informatie van de gebruiker. Je voegt hier aan toe andere actiepunten of taken genoemd. 
+    Het verzoek tot uitnodiging moet zo kort en duidelijk mogelijk zijn.
     """
-    chat_model = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4-0125-preview", temperature=0.7)
+    chat_model = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4-0125-preview", temperature=0)
     prompt_template = ChatPromptTemplate.from_template(prompt)
     llm_chain = prompt_template | chat_model | StrOutputParser()
     
